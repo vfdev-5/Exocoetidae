@@ -134,7 +134,7 @@ void _updateEstimatedPositions(float estimatedPositions[NUMBER_BEACONS][N_DIMS],
     norm = sqrt(norm);
         
     for (int j=0; j<N_DIMS; j++) { 
-      estimatedPositions[i, j] = distances[i] * unitVector[j]/norm + BEACONS_POSITION[i][j];
+      estimatedPositions[i][j] = distances[i] * vec[j]/norm + BEACONS_POSITION[i][j];
     }
   }
 }
@@ -157,7 +157,7 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
   }
   
   for (int i=0; i<N_ITER; i++) {
-      _updateEstimatedPositions(estimatedPositions, p);      
+      _updateEstimatedPositions(estimatedPositions, p, distances);      
       for (int j=0; j<N_DIMS; j++) {
         // Compute sum of errors: errors = sum(p[k] - estimated_positions[:,k])
         float delta = 0.0;
@@ -267,7 +267,6 @@ void loop() {
       }
       Serial.println("");
       delay(10);
-    }
   }
  
   if (numberFoundBeacons < 2) {
@@ -278,14 +277,14 @@ void loop() {
   float p[N_DIMS]; // Fish position
   Serial.println("Initialize fish position");
   for(int i=0; i<N_DIMS; i++) {
-    p[i] = random(POSITION_MIN_MAX[i][0], posMinMax[i][1]);    // randomly define the initial position within the bounds
+    p[i] = random(POSITION_MIN_MAX[i][0], POSITION_MIN_MAX[i][1]);    // randomly define the initial position within the bounds
     Serial.print(p[i]);
     Serial.print(",\t");
   }
   Serial.println("");
   
   Serial.println("----- Compute position -----");
-  computePosition(&p, distances); 
+  computePosition(p, distances); 
   for(int i=0; i<N_DIMS; i++) {
     Serial.print(p[i]);
     Serial.print(",\t");
