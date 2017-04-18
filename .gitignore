@@ -1,4 +1,11 @@
 
+# C++,C
+*build*
+*Build*
+*.so
+*.dll
+*.o
+
 # MacOSX
 .DS_Store
 

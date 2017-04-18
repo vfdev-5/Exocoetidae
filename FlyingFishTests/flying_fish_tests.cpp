@@ -4,10 +4,9 @@
  *  
  */
 
-////////////////////////// External libraries //////////////////////
-#include "ESP8266WiFi.h"
-
-////////////////////////// Global constants ////////////////////////
+#include "moc_arduino.h"
+ 
+////////////////////// Global constants ////////////////////////
 const int N_DIMS = 3; // 3D or 2D space
 
 const float GAMMA = 0.01; // learning rate
@@ -18,18 +17,18 @@ const float NA = -999999.0;
 const int NUMBER_BEACONS = 4;
 
 const String BEACON_MAC_ADDRESSES[NUMBER_BEACONS] = { 
-  "5E:CF:7F:0F:79:76",     // Fish 1
-  "5E:CF:7F:0F:78:71",     // Fish 4                   
-  "5E:CF:7F:0F:79:33",     // Fish 6
+  "CC:61:E5:CC:14:D4",     // 
+  "BC:EE:B8:FA:38:46",     //                    
+  "7B:8F:7E:1A:FE:34",     // 
   "F4:CA:E5:BF:E4:68"      //
 };     
 
 // 3D coordinates of beacons
 const float BEACONS_POSITION[NUMBER_BEACONS][3] = {
-  {  0.0,  0.0,  1.5},
-  {  5.5,  0.0,  1.5},
-  {  2.75, 4.0,  2.0},
-  {  0.0,  0.5,  2.1}
+  {  -12.34,  0.0,  1.0},
+  {  -2.345,  5.67,  1.0},
+  {  3.456,  6.789,  1.0},
+  {  13.456,  1.234,  1.0}
 };
 
 // Calibration constants for each beacon. Signal strenght dBm at 1 meter
@@ -42,20 +41,20 @@ const float BEACON_CALIBRATION[NUMBER_BEACONS] = {
 
 // Minimal and maximal posible fish position
 const float POSITION_MIN_MAX[3][2] = {
-  {  0.0,  7.0}, // x min, x max
-  {  0.0,  7.0}, // y min, y max
+  {  -15.0, 15.0}, // x min, x max
+  {  -15.0, 15.0}, // y min, y max
   {  0.0,  2.5}  // z min, z max
 };
                                
 
 // Signal calibration  0m,    10m for each ground reciver  
-//const float calibR[NposR][2]= {{     -17,    -0},
-//                               {     -17,    -0},
-//                               {     -10,    -0},
-//                               {      -8,    -0}};
+// const float calibR[NposR][2]= {{     -17,    -0},
+                             // {     -17,    -0},
+                             // {     -10,    -0},
+                             // {      -8,    -0}};
 
 
-//////////////////////// Global functions ////////////////////////
+//////////////////// Global functions ////////////////////////
 /*
  * Compute RSSI of an emitter given a distance
  *   rssi = -10 * n * log10(d) + A
@@ -120,9 +119,13 @@ void _updateEstimatedPositions(float estimatedPositions[NUMBER_BEACONS][N_DIMS],
                                 float distances[NUMBER_BEACONS]) {
   for (int i=0; i<NUMBER_BEACONS; i++) {
 
+    Serial.print("\n--- update est.pos : distances[i]=");
+    Serial.println(distances[i]);
     if (!(distances[i] > NA)) {
       continue;
     }
+   
+    Serial.print("--- update est.pos : norm=");
 
     float vec[N_DIMS];
     // compute unit vector between testing position `p` and beacon position
@@ -131,9 +134,13 @@ void _updateEstimatedPositions(float estimatedPositions[NUMBER_BEACONS][N_DIMS],
       vec[j] = p[j] - BEACONS_POSITION[i][j];
       norm += vec[j]*vec[j];
     }
-    norm = sqrt(norm);
-        
+    norm = sqrt(norm);      
+    Serial.print(norm);
+    Serial.println("");
+
     for (int j=0; j<N_DIMS; j++) { 
+      Serial.print("---> v[j]=");
+      Serial.print(vec[j]);
       estimatedPositions[i][j] = distances[i] * vec[j]/norm + BEACONS_POSITION[i][j];
     }
   }
@@ -151,35 +158,45 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
   float estimatedPositions[NUMBER_BEACONS][N_DIMS];
   // Initialize estimated position
   for (int i=0; i<NUMBER_BEACONS; i++) {
+    Serial.print("- compPos: distances[i]=");
+    Serial.print(distances[i]);
+    Serial.println("");    
     for (int j=0; j<N_DIMS; j++) {
       estimatedPositions[i][j] = NA;
     }
   }
+  
+  for (int i=0; i<N_ITER; i++) {
+      Serial.print(i);
+      Serial.print(" | ");
+      _updateEstimatedPositions(estimatedPositions, p, distances);       
+      for (int ii=0; ii<NUMBER_BEACONS; ii++) {
+	Serial.print("\n--- est.pos:");
+        for (int jj=0; jj<N_DIMS; jj++) {
+          Serial.print(estimatedPositions[ii][jj]);
+          Serial.print(" ");
+	}
+      } 
+      Serial.println("");
 
-//  for (int i=0; i<N_ITER; i++) {
-//      _updateEstimatedPositions(estimatedPositions, p, distances);            
-//      Serial.print(i);
-//      Serial.print(" | ");      
-//      
-//      for (int j=0; j<N_DIMS; j++) {
-//        // Compute sum of errors: errors = sum(p[k] - estimated_positions[:,k])
-//        float delta = 0.0;
-//        for (int k=0; k<NUMBER_BEACONS; k++) {
-//          if (estimatedPositions[k][j] > NA) { 
-//            delta += p[j] - estimatedPositions[k][j];
-//          }
-//        }
-//        p[j] -= GAMMA * delta;
-//        
-//        Serial.print(p[j]);        
-//        Serial.print(" ");
-//      }
-//      Serial.println("");
-//  } 
+
+      for (int j=0; j<N_DIMS; j++) {
+        // Compute sum of errors: errors = sum(p[k] - estimated_positions[:,k])
+        float delta = 0.0;
+        for (int k=0; k<NUMBER_BEACONS; k++) {
+          if (estimatedPositions[k][j] > NA) { 
+            delta += p[j] - estimatedPositions[k][j];
+          }
+        }
+        p[j] -= GAMMA * delta;
+      	Serial.print(p[j]);
+	Serial.print(" ");
+      }
+      Serial.println(" ");
+  } 
 }
 
-
-//////////////////////// Setup & Loop ////////////////////////
+//////////////////// Setup & Loop ////////////////////////
 
 void setup() {
   Serial.begin(115200);
@@ -192,7 +209,7 @@ void setup() {
 }
 
 void loop() {
-  
+  DEBUG("-")
   Serial.println("---- scan start -----");
   delay(2000);
   digitalWrite(LED_BUILTIN, LOW);         // Turn the LED on (Note that LOW is the voltage level
@@ -203,43 +220,42 @@ void loop() {
   Serial.print("---- scan done  ----- ");
   Serial.print(t1-t0);
   Serial.println("ms");
-   
+  
+  DEBUG("--")  
+
   if (numberFoundNetworks == 0) {
     Serial.println("No networks found");
     return;
   }
+  
+  DEBUG("---")
   
   Serial.print(numberFoundNetworks);
   Serial.println(" networks found");
 
   float distances[NUMBER_BEACONS]; // Distances to beacons
   int numberFoundBeacons = 0;
-  for (int i=0; i<numberFoundNetworks; ++i) { // Print SSID and RSSI for each network found
-      Serial.print("- ");
-      Serial.print(WiFi.BSSIDstr(i)); 
-      Serial.print(" | ");
-      Serial.print(WiFi.SSID(i)); 
-      Serial.println(""); 
-                 
-      for(int j=0; j<NUMBER_BEACONS; ++j) {
-        distances[j] = NA;
-        
-        if( WiFi.BSSIDstr(i).equals(BEACON_MAC_ADDRESSES[j]) ) {          
-          numberFoundBeacons++;
-                    
-          distances[j] = RSSI2Distance(WiFi.RSSI(i), BEACON_CALIBRATION[j]);
-          Serial.print("\t rid:");
-          Serial.print(j);
-          Serial.print("\t Dist:");
-          Serial.print(distances[j]);
-        }
+      
+  for(int j=0; j<NUMBER_BEACONS; ++j) {
+    distances[j] = NA;
+    
+    for (int i=0; i<numberFoundNetworks; ++i) { // Print SSID and RSSI for each network found    
+    
+      if( WiFi.BSSIDstr(i).equals(BEACON_MAC_ADDRESSES[j]) ) {          
+        numberFoundBeacons++;                  
+        distances[j] = RSSI2Distance(WiFi.RSSI(i), BEACON_CALIBRATION[j]);
+        Serial.print("\t rid:");
+        Serial.print(j);
+        Serial.print("\t Dist:");
+        Serial.print(distances[j]);
       }
-      Serial.println("");
-      delay(10);
+    }
+    Serial.println("");
+    delay(10);
   }
  
   if (numberFoundBeacons < 2) {
-    Serial.println("Not enough beacons detected");
+    Serial.println("Too less beacons detected");
     return;
   }
 
@@ -247,7 +263,6 @@ void loop() {
   Serial.println("Initialize fish position");
   for(int i=0; i<N_DIMS; i++) {
     p[i] = random(POSITION_MIN_MAX[i][0], POSITION_MIN_MAX[i][1]);    // randomly define the initial position within the bounds
-    p[i] += 0.5;
     Serial.print(p[i]);
     Serial.print(",\t");
   }
@@ -260,6 +275,16 @@ void loop() {
     Serial.print(",\t");
   }
   Serial.println("");
-  
+
+}
+
+
+int main() {
+		
+  //setup();
+  for (int i=0; i<1; i++) {
+    loop();
+  }
+  return 0;	
 }
 
