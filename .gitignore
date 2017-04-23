@@ -5,6 +5,8 @@
 *.so
 *.dll
 *.o
+*.user
+
 
 # MacOSX
 .DS_Store
