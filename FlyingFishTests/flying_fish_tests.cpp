@@ -16,6 +16,8 @@ const float NA = -999999.0;
 
 const int NUMBER_BEACONS = 4;
 
+//#define VERBOSE
+
 const String BEACON_MAC_ADDRESSES[NUMBER_BEACONS] = { 
     "CC:61:E5:CC:14:D4",     //
     "BC:EE:B8:FA:38:46",     //
@@ -108,13 +110,13 @@ void _updateEstimatedPositions(float estimatedPositions[NUMBER_BEACONS][N_DIMS],
                                float distances[NUMBER_BEACONS]) {
     for (int i=0; i<NUMBER_BEACONS; i++) {
 
+#ifdef VERBOSE
         Serial.print("\n--- update est.pos : distances[i]=");
         Serial.println(distances[i]);
+#endif
         if (!(distances[i] > NA)) {
             continue;
         }
-
-        Serial.print("--- update est.pos : norm=");
 
         float vec[N_DIMS];
         // compute unit vector between testing position `p` and beacon position
@@ -124,13 +126,19 @@ void _updateEstimatedPositions(float estimatedPositions[NUMBER_BEACONS][N_DIMS],
             norm += vec[j]*vec[j];
         }
         norm = sqrt(norm);
+
+#ifdef VERBOSE
+        Serial.print("--- update est.pos : norm=");
         Serial.print(norm);
         Serial.println("");
-
         Serial.print("---> v[j]=");
+#endif
+
         for (int j=0; j<N_DIMS; j++) {
+#ifdef VERBOSE
             Serial.print(vec[j] / norm);
             Serial.print(" ");
+#endif
             estimatedPositions[i][j] = distances[i] * vec[j]/norm + BEACONS_POSITION[i][j];
         }
     }
@@ -148,18 +156,23 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
     float estimatedPositions[NUMBER_BEACONS][N_DIMS];
     // Initialize estimated position
     for (int i=0; i<NUMBER_BEACONS; i++) {
+#ifdef VERBOSE
         Serial.print("- compPos: distances[i]=");
         Serial.print(distances[i]);
         Serial.println("");
+#endif
         for (int j=0; j<N_DIMS; j++) {
             estimatedPositions[i][j] = NA;
         }
     }
 
     for (int i=0; i<N_ITER; i++) {
+#ifdef VERBOSE
         Serial.print(i);
         Serial.print(" | ");
+#endif
         _updateEstimatedPositions(estimatedPositions, p, distances);
+#ifdef VERBOSE
         for (int ii=0; ii<NUMBER_BEACONS; ii++) {
             Serial.print("\n--- est.pos:");
             for (int jj=0; jj<N_DIMS; jj++) {
@@ -168,7 +181,7 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
             }
         }
         Serial.println("");
-
+#endif
 
         for (int j=0; j<N_DIMS; j++) {
             // Compute sum of errors: errors = sum(p[k] - estimated_positions[:,k])
@@ -179,10 +192,14 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
                 }
             }
             p[j] -= GAMMA * delta;
+#ifdef VERBOSE
             Serial.print(p[j]);
             Serial.print(" ");
+#endif
         }
+#ifdef VERBOSE
         Serial.println(" ");
+#endif
     }
 }
 
@@ -252,8 +269,8 @@ void loop() {
     float p[N_DIMS]; // Fish position
     Serial.println("Initialize fish position");
     for(int i=0; i<N_DIMS; i++) {
-        // p[i] = random(POSITION_MIN_MAX[i][0], POSITION_MIN_MAX[i][1]);    // randomly define the initial position within the bounds
-        p[i] = i < 2 ? 0.0 : 1.0;
+        p[i] = random(POSITION_MIN_MAX[i][0], POSITION_MIN_MAX[i][1]);    // randomly define the initial position within the bounds
+        p[i] += 0.5;
         Serial.print(p[i]);
         Serial.print(",\t");
     }
@@ -273,7 +290,7 @@ void loop() {
 int main() {
 
     //setup();
-    for (int i=0; i<1; i++) {
+    for (int i=0; i<2; i++) {
         loop();
     }
     return 0;

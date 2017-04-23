@@ -8,6 +8,9 @@
 #include "ESP8266WiFi.h"
 
 ////////////////////////// Global constants ////////////////////////
+
+//#define VERBOSE
+
 const int N_DIMS = 3; // 3D or 2D space
 
 const float GAMMA = 0.1; // learning rate
@@ -146,8 +149,10 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
     }
 
     for (int i=0; i<N_ITER; i++) {
+#ifdef DEBUG
         Serial.print(i);
         Serial.print(" | ");
+#endif
         _updateEstimatedPositions(estimatedPositions, p, distances);
         for (int j=0; j<N_DIMS; j++) {
             // Compute sum of errors: errors = sum(p[k] - estimated_positions[:,k])
@@ -158,15 +163,21 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
                 }
             }
             p[j] -= GAMMA * delta;
+#ifdef VERBOSE
             Serial.print(p[j]);
             Serial.print(" ");
+#endif
         }
+#ifdef VERBOSE
         Serial.println("");
+#endif
     }
 }
 
 
 //////////////////////// Setup & Loop ////////////////////////
+
+float POSITION[N_DIMS]; // Fish position
 
 void setup() {
     Serial.begin(115200);
@@ -176,6 +187,17 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
     delay(100);
     Serial.println("----- Setup COMPLETE -----");
+
+    Serial.println("Initialize fish position");
+    for(int i=0; i<N_DIMS; i++) {
+        POSITION[i] = random(POSITION_MIN_MAX[i][0], POSITION_MIN_MAX[i][1]);    // randomly define the initial position within the bounds
+        POSITION[i] += 0.5;
+        Serial.print(POSITION[i]);
+        Serial.print(",\t");
+    }
+    Serial.println("");
+
+
 }
 
 void loop() {
@@ -230,20 +252,10 @@ void loop() {
         return;
     }
 
-    float p[N_DIMS]; // Fish position
-    Serial.println("Initialize fish position");
-    for(int i=0; i<N_DIMS; i++) {
-        p[i] = random(POSITION_MIN_MAX[i][0], POSITION_MIN_MAX[i][1]);    // randomly define the initial position within the bounds
-        p[i] += 0.5;
-        Serial.print(p[i]);
-        Serial.print(",\t");
-    }
-    Serial.println("");
-
     Serial.println("----- Compute position -----");
-    computePosition(p, distances);
+    computePosition(POSITION, distances);
     for(int i=0; i<N_DIMS; i++) {
-        Serial.print(p[i]);
+        Serial.print(POSITION[i]);
         Serial.print(",\t");
     }
     Serial.println("");
