@@ -23,24 +23,25 @@ const int NUMBER_BEACONS = 4;
 const String BEACON_MAC_ADDRESSES[NUMBER_BEACONS] = { 
     "5E:CF:7F:0F:79:76",     // Fish 1
     "5E:CF:7F:0F:78:71",     // Fish 4
-    "5E:CF:7F:0F:79:33",     // Fish 6
-    "F4:CA:E5:BF:E4:68"      //
+    "5E:CF:7F:0F:79:33",     // Fish 6   
+    "5E:CF:7F:0E:9A:39"      // Fish10
 };     
 
 // 3D coordinates of beacons
+const float scale = 0.305;
 const float BEACONS_POSITION[NUMBER_BEACONS][3] = {
-    {  0.0,  0.0,  1.5},
-    {  5.5,  0.0,  1.5},
-    {  2.75, 4.0,  2.0},
-    {  0.0,  0.5,  2.1}
+    {  scale * 12,  scale * 11,  1.0},
+    {  scale * 0.0,  scale * 11.0,  1.0},
+    {  scale * 12, scale * 0.0,  1.0},
+    {  scale * 0.0,  scale * 0.0,  1.0}
 };
 
 // Calibration constants for each beacon. Signal strenght dBm at 1 meter
 const float BEACON_CALIBRATION[NUMBER_BEACONS] = {
-    -120.0,
-    -120.0,
-    -120.0,
-    -120.0
+    -45.0,
+    -45.0,
+    -45.0,
+    -45.0
 };
 
 // Minimal and maximal posible fish position
@@ -149,7 +150,7 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
     }
 
     for (int i=0; i<N_ITER; i++) {
-#ifdef DEBUG
+#ifdef VERBOSE
         Serial.print(i);
         Serial.print(" | ");
 #endif
@@ -180,10 +181,12 @@ void computePosition(float p[N_DIMS], float distances[NUMBER_BEACONS]) {
 float POSITION[N_DIMS]; // Fish position
 
 void setup() {
+  
     Serial.begin(115200);
     Serial.println("----- Setup START -----");
     WiFi.mode(WIFI_STA);     // Set WiFi to station mode
-    WiFi.disconnect();       // disconnect
+// ....    
+//    WiFi.disconnect();       // disconnect
     pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
     delay(100);
     Serial.println("----- Setup COMPLETE -----");
@@ -203,7 +206,7 @@ void setup() {
 void loop() {
 
     Serial.println("---- scan start -----");
-    delay(2000);
+    delay(500);
     digitalWrite(LED_BUILTIN, LOW);         // Turn the LED on (Note that LOW is the voltage level
     float t0 = millis();
     int numberFoundNetworks = WiFi.scanNetworks();               // get the number of networks found
@@ -228,19 +231,18 @@ void loop() {
         distances[j] = NA;
 
         for (int i=0; i<numberFoundNetworks; ++i) { // Print SSID and RSSI for each network found
-            Serial.print("- ");
-            Serial.print(WiFi.BSSIDstr(i));
-            Serial.print(" | ");
-            Serial.print(WiFi.SSID(i));
-            Serial.println("");
 
             if( WiFi.BSSIDstr(i).equals(BEACON_MAC_ADDRESSES[j]) ) {
                 numberFoundBeacons++;
-                distances[j] = RSSI2Distance(WiFi.RSSI(i), BEACON_CALIBRATION[j]);
+                float rssi = WiFi.RSSI(i);
+                distances[j] = RSSI2Distance(rssi, BEACON_CALIBRATION[j]);
                 Serial.print("\t rid:");
                 Serial.print(j);
+                Serial.print("\t RSSI:");
+                Serial.print(rssi);
                 Serial.print("\t Dist:");
                 Serial.print(distances[j]);
+                Serial.println("");
             }
         }
         Serial.println("");
@@ -249,6 +251,16 @@ void loop() {
 
     if (numberFoundBeacons < 2) {
         Serial.println("Not enough beacons detected");
+
+        for (int i=0; i<numberFoundNetworks; ++i) { // Print SSID and RSSI for each network found
+            Serial.print("- ");
+            Serial.print(WiFi.BSSIDstr(i));
+            Serial.print(" | ");
+            Serial.print(WiFi.SSID(i));
+            Serial.println("");
+        }
+        Serial.println("");
+        delay(10);       
         return;
     }
 
